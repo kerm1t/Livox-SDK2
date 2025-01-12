@@ -45,8 +45,12 @@ set(DEMO_NAME livox_lidar_quick_start_eCAL)
 #PROTOBUF_TARGET_CPP(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/proto/ ${protobuf_files})
 #set(_protobuf_include_path ${CMAKE_CURRENT_SOURCE_DIR}/proto)
 #EXEC_PROGRAM(${PROTOBUF_PROTOC_EXECUTABLE} ARGS --cpp_out ${CMAKE_CURRENT_BINARY_DIR} ${_protobuf_include_path} ${protobuf_files})
+#add_executable(${DEMO_NAME} main.cpp)
 add_executable(${DEMO_NAME} ${source_files})
-#PROTOBUF_TARGET_CPP(${DEMO_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/proto/ ${protobuf_files})
+# the below doesn't create the c++ files from protos atm. believe this is due to sub-project
+#    however it creates the folder structures in the VC++ Studio solution
+#    proto files are created manually atm by executing the compile_proto.bat, followed by copy of the .proto files into build folder
+PROTOBUF_TARGET_CPP(${DEMO_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/proto/ ${protobuf_files})
 
 # Option B)
 #set(source_files main.cpp)
