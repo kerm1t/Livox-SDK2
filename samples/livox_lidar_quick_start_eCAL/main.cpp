@@ -39,11 +39,52 @@
 #include <chrono>
 #include <iostream>
 
+#define eCAL_ON
+#ifdef eCAL_ON
 // eCAL
 #include <ecal/ecal.h>
 #include <ecal/msg/protobuf/publisher.h>
 #include <ecal/msg/protobuf/subscriber.h>
+// proto i/o
+#include "pcl.pb.h"
+#include "foxglove/LinePrimitive.pb.h"
+#include "foxglove/PointCloud.pb.h"
+#include "PointCloudHandler.h"
 
+eCAL::protobuf::CPublisher<pcl::PointCloud2> publisher_pcl2;
+
+void init_eCAL(int argc, char** argv) {
+  // Initialize eCAL
+  eCAL::Initialize(argc, argv, "Livox Mid360");
+  // create publisher
+///  publisher_pcl2 = eCAL::protobuf::CPublisher<pcl::PointCloud2>("MRL360");
+  publisher_pcl2 = eCAL::protobuf::CPublisher<pcl::PointCloud2>("meta_pcl");
+  printf("Ecal publisher created\n");
+  // set eCAL state to healthy (--> eCAL Monitor)
+  eCAL::Process::SetState(proc_sev_healthy, proc_sev_level1, "MRL360 eCAL publishers initialized");
+}
+
+void publish_pointloud2(const LivoxLidarEthernetPacket* data, eCAL::protobuf::CPublisher<pcl::PointCloud2>& publisher_pcl2) {
+  // Create a protobuf message object
+  pcl::PointCloud2 mrl360_pointcloud;
+  std::vector<float> pts;
+  LivoxLidarCartesianHighRawPoint* p_point_data = (LivoxLidarCartesianHighRawPoint*)data->data;
+  for (uint32_t i = 0; i < data->dot_num; i++)
+  {
+    pts.push_back(p_point_data[i].x);
+    pts.push_back(p_point_data[i].y);
+    pts.push_back(p_point_data[i].z);
+    pts.push_back(p_point_data[i].reflectivity);
+  }
+  // fill the protobuf message object
+  setPointCloud(&mrl360_pointcloud, { "x","y","z","reflectivity" }, pts);
+//  data->timestamp
+//  mrl360_pointcloud.mutable_header()->mutable_stamp()->set_secs(p.secs);
+//  mrl360_pointcloud.mutable_header()->mutable_stamp()->set_nsecs(p.nsecs);
+  // Send the message
+  publisher_pcl2.Send(mrl360_pointcloud);
+};
+#endif
 
 void PointCloudCallback(uint32_t handle, const uint8_t dev_type, LivoxLidarEthernetPacket* data, void* client_data) {
   if (data == nullptr) {
@@ -66,6 +107,8 @@ void PointCloudCallback(uint32_t handle, const uint8_t dev_type, LivoxLidarEther
   } else if (data->data_type == kLivoxLidarSphericalCoordinateData) {
     LivoxLidarSpherPoint* p_point_data = (LivoxLidarSpherPoint *)data->data;
   }
+
+  publish_pointloud2(data, publisher_pcl2);
 }
 
 void ImuDataCallback(uint32_t handle, const uint8_t dev_type,  LivoxLidarEthernetPacket* data, void* client_data) {
@@ -184,33 +227,17 @@ void LivoxLidarPushMsgCallback(const uint32_t handle, const uint8_t dev_type, co
   std::cout << info << std::endl;
   return;
 }
-/*
-void init_eCAL(int argc, char** argv) {
-  // Initialize eCAL
-  eCAL::Initialize(argc, argv, "Livox Mid360 (eCal)");
-  // Create a protobuf subscriber
-  // possible topics:
-  // - AEyeSensorPointCloudData
-  // - gpf_non_ground
-  // - meta_pcl
-//  eCAL::protobuf::CSubscriber<pcl::PointCloud2> subscriber_hrl("AEyeSensorPointCloudData");
-  eCAL::protobuf::CSubscriber<pcl::PointCloud2> subscriber_hrl("gse_out");
-  // Set the Callback
-  subscriber_hrl.AddReceiveCallback(std::bind(&Pointcloud_Callback, std::placeholders::_2));
-  // create publisher
-  eCAL::protobuf::CPublisher<pcl::PointCloud2> publisher_frs(FRS_TOPIC);
-  eCAL::protobuf::CPublisher<foxglove::LinePrimitive> publisher_poly(POLY_TOPIC);
-  eCAL::protobuf::CPublisher<foxglove::PointCloud> publisher_fox(FOX_TOPIC);
-  // set eCAL state to healthy (--> eCAL Monitor)
-  eCAL::Process::SetState(proc_sev_healthy, proc_sev_level1, "LANE eCAL publishers initialized");
-}
-*/
-int main(int argc, const char *argv[]) {
+
+int main(int argc, char *argv[]) {
   if (argc != 2) {
     printf("Params Invalid, must input config path.\n");
     return -1;
   }
   const std::string path = argv[1];
+
+#ifdef eCAL_ON
+  init_eCAL(argc, argv);
+#endif
 
   // REQUIRED, to init Livox SDK2
   if (!LivoxLidarSdkInit(path.c_str())) {
