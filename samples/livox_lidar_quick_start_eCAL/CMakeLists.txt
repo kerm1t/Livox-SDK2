@@ -45,7 +45,7 @@ set(DEMO_NAME livox_lidar_quick_start_eCAL)
 #PROTOBUF_TARGET_CPP(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/proto/ ${protobuf_files})
 #set(_protobuf_include_path ${CMAKE_CURRENT_SOURCE_DIR}/proto)
 #EXEC_PROGRAM(${PROTOBUF_PROTOC_EXECUTABLE} ARGS --cpp_out ${CMAKE_CURRENT_BINARY_DIR} ${_protobuf_include_path} ${protobuf_files})
-add_executable(${DEMO_NAME} source_files)
+add_executable(${DEMO_NAME} ${source_files})
 #PROTOBUF_TARGET_CPP(${DEMO_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/proto/ ${protobuf_files})
 
 # Option B)
